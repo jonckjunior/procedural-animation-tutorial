@@ -3,50 +3,44 @@
 verlet_objects = {}
 
 function create_verlet_particle(x, y)
-    return { x = x, y = y, px = x, py = y, ax = 0, ay = 0, fixed = false }
+    return { x = x, y = y, px = x, py = y, ax = 0, ay = 0 }
 end
 
-function draw_spine(spine)
-    for p in all(spine.particles) do
-        if p == spine.head.p1 then
-            circfill(p.x, p.y, radius, 9)
-        else
-            circfill(p.x, p.y, radius, 8)
-        end
+function draw_rope(rope)
+    for p in all(rope.particles) do
+        circfill(p.x, p.y, radius, 8)
     end
-    for c in all(spine.constraints) do
+    for c in all(rope.constraints) do
         if c.type == "distance" then
             line(c.p1.x, c.p1.y, c.p2.x, c.p2.y, 7)
         end
     end
 end
 
-function create_spine(x, y, segments, segment_distance)
-    local spine = {
+function create_rope(x, y, segments, segment_distance)
+    local rope = {
         particles = {},
         constraints = {},
-        draw = draw_spine,
-        head = nil,
-        rotation = 0.5
+        draw = draw_rope
     }
     for i = 0, segments do
-        add(spine.particles, create_verlet_particle(x + segment_distance * i, y))
+        add(rope.particles, create_verlet_particle(x + segment_distance * i, y))
     end
-    for i = 2, #spine.particles do
+    for i = 2, #rope.particles do
         add(
-            spine.constraints, {
+            rope.constraints, {
                 type = "distance",
-                p1 = spine.particles[i - 1],
-                p2 = spine.particles[i],
+                p1 = rope.particles[i - 1],
+                p2 = rope.particles[i],
                 distance = segment_distance
             }
         )
     end
+    -- pin the root particle
+    add(rope.constraints, { type = "pin", p1 = rope.particles[1], x = rope.particles[1].x, y = rope.particles[1].y })
 
-    add(verlet_objects, spine)
-    spine.head = { p1 = spine.particles[1], p2 = spine.particles[2], distance = segment_distance }
-    spine.head.p1.fixed = true
-    return spine
+    add(verlet_objects, rope)
+    return rope
 end
 
 function update_verlet_system()
@@ -55,7 +49,7 @@ function update_verlet_system()
             update_verlet(p)
         end
     end
-    for i = 1, 8 do
+    for i = 1, 1 do
         for o in all(verlet_objects) do
             for c in all(o.constraints) do
                 solve_constraints(c)
@@ -86,48 +80,39 @@ function update_verlet(p)
     p.py = p.y
 
     -- calculate new position
-    p.x += vx * 0.95 + p.ax
-    p.y += vy * 0.95 + p.ay
+    p.x += vx * 0.99 + p.ax
+    p.y += vy * 0.99 + p.ay
 
     -- reset acceleration
     p.ax = 0
-    p.ay = 0
+    p.ay = 0.1
     -- to simulate gravity
 end
 
 function resolve_distance(p1, p2, target_dist)
+    -- fetch distance between points
     local dx = p2.x - p1.x
     local dy = p2.y - p1.y
     local stiffness = 1.0
     local dist = sqrt(dx * dx + dy * dy) * stiffness
+
+    -- prevent division by zero if points overlap
     if dist < eps then return end
+
+    -- calculate unit vectors
     local nx = dx / dist
     local ny = dy / dist
-    local diff = dist - target_dist
 
-    if p1.fixed and p2.fixed then
-        return -- Can't resolve if both fixed
-    elseif p1.fixed then
-        -- Move only p2 fully
-        local off_x = nx * diff
-        local off_y = ny * diff
-        p2.x -= off_x
-        p2.y -= off_y
-    elseif p2.fixed then
-        -- Move only p1 fully
-        local off_x = nx * diff
-        local off_y = ny * diff
-        p1.x += off_x
-        p1.y += off_y
-    else
-        -- Symmetric as before
-        local off_x = nx * diff * 0.5
-        local off_y = ny * diff * 0.5
-        p1.x += off_x
-        p1.y += off_y
-        p2.x -= off_x
-        p2.y -= off_y
-    end
+    -- apply displacement evenly between two points
+    local diff = dist - target_dist
+    local off_x = nx * diff * 0.5
+    local off_y = ny * diff * 0.5
+
+    -- distribute displacement
+    p1.x += off_x
+    p1.y += off_y
+    p2.x -= off_x
+    p2.y -= off_y
 end
 
 function border_collision_verlet()
