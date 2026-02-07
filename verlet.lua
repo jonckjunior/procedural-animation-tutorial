@@ -183,19 +183,23 @@ end
 function resolve_angle(p1, p2, p3, min_angle, max_angle)
     local b1 = atan2(p3.x - p2.x, p3.y - p2.y)
     local a1 = atan2(p1.x - p2.x, p1.y - p2.y)
-    
+
     -- p1's angle relative to p3 (treating p3 as 0)
     local relative_angle = a1 - b1
-    
+
     -- Wrap to [0, 1)
-    while (relative_angle < 0) relative_angle += 1
-    -- while (relative_angle >= 1) relative_angle -= 1
-    
+    while (relative_angle < 0) do
+        relative_angle += 1
+    end
+    while (relative_angle >= 1) do
+        relative_angle -= 1
+    end
+
     -- Check if within range
     if min_angle <= relative_angle and relative_angle <= max_angle then
         return
     end
-    
+
     -- Calculate correction
     local angle_correction = 0
     if relative_angle < min_angle then
@@ -203,9 +207,9 @@ function resolve_angle(p1, p2, p3, min_angle, max_angle)
     elseif relative_angle > max_angle then
         angle_correction = relative_angle - max_angle
     end
-    
+
     -- Rotate p3
-    local b_len = sqrt((p3.x - p2.x)^2 + (p3.y - p2.y)^2)
+    local b_len = sqrt((p3.x - p2.x) ^ 2 + (p3.y - p2.y) ^ 2)
     p3.x = p2.x + cos(b1 + angle_correction) * b_len
     p3.y = p2.y + sin(b1 + angle_correction) * b_len
 end

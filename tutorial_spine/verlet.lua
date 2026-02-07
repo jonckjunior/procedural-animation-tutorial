@@ -32,6 +32,8 @@ function create_spine(x, y, segments, segment_distance)
     for i = 0, segments do
         add(spine.particles, create_verlet_particle(x + segment_distance * i, y))
     end
+
+    -- distance constraints between particles
     for i = 2, #spine.particles do
         add(
             spine.constraints, {
@@ -39,6 +41,20 @@ function create_spine(x, y, segments, segment_distance)
                 p1 = spine.particles[i - 1],
                 p2 = spine.particles[i],
                 distance = segment_distance
+            }
+        )
+    end
+
+    -- angle constraints to limit bending
+    for i = 3, #spine.particles do
+        add(
+            spine.constraints, {
+                type = "angle",
+                p1 = spine.particles[i - 2],
+                p2 = spine.particles[i - 1],
+                p3 = spine.particles[i],
+                min_angle = 0.25,
+                max_angle = 0.75
             }
         )
     end
@@ -71,6 +87,8 @@ function solve_constraints(c)
     elseif c.type == "pin" then
         c.p1.x = c.x
         c.p1.y = c.y
+    elseif c.type == "angle" then
+        resolve_angle(c.p1, c.p2, c.p3, c.min_angle, c.max_angle)
     else
         assert(false, c.type .. " is not a constraint type")
     end
@@ -160,4 +178,38 @@ function draw_verlet()
     for o in all(verlet_objects) do
         o.draw(o)
     end
+end
+
+function resolve_angle(p1, p2, p3, min_angle, max_angle)
+    local b1 = atan2(p3.x - p2.x, p3.y - p2.y)
+    local a1 = atan2(p1.x - p2.x, p1.y - p2.y)
+
+    -- p1's angle relative to p3 (treating p3 as 0)
+    local relative_angle = a1 - b1
+
+    -- Wrap to [0, 1)
+    while (relative_angle < 0) do
+        relative_angle += 1
+    end
+    while (relative_angle >= 1) do
+        relative_angle -= 1
+    end
+
+    -- Check if within range
+    if min_angle <= relative_angle and relative_angle <= max_angle then
+        return
+    end
+
+    -- Calculate correction
+    local angle_correction = 0
+    if relative_angle < min_angle then
+        angle_correction = relative_angle - min_angle
+    elseif relative_angle > max_angle then
+        angle_correction = relative_angle - max_angle
+    end
+
+    -- Rotate p3
+    local b_len = sqrt((p3.x - p2.x) ^ 2 + (p3.y - p2.y) ^ 2)
+    p3.x = p2.x + cos(b1 + angle_correction) * b_len
+    p3.y = p2.y + sin(b1 + angle_correction) * b_len
 end

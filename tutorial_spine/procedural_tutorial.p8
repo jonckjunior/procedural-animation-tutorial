@@ -7,6 +7,7 @@ function _init()
     radius = 2
     eps = 0.01
     spine = create_spine((127 - 5 * 10) / 2, 50, 5, 10)
+    debug = {}
 end
 
 function _update()
@@ -51,6 +52,10 @@ function _draw()
     line(127, 0, 127, 127, 5)
 
     draw_verlet()
+    for i, v in ipairs(debug) do
+        print(v, 0, 10 + i * 8)
+    end
+    debug = {}
 end
 
 __gfx__
