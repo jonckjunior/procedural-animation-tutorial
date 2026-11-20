@@ -2,6 +2,9 @@
 
 A tutorial exploring procedural animation using Verlet integration for stable, natural-looking movement without complex force calculations.
 
+<img width="3456" height="2168" alt="spider_moving" src="https://github.com/user-attachments/assets/b758beac-68de-4733-be30-54e2071003fe" />
+
+
 ## Key Concepts
 
 ### Verlet vs Euler Integration
